@@ -59,6 +59,7 @@ new class extends Component
         ]);
 
         $this->reset('newTitle', 'newCategoryId');
+        $this->dispatch('toast', message: 'Tarea creada correctamente.', type: 'success');
     }
 
     public function toggleComplete(int $taskId): void
@@ -91,16 +92,18 @@ new class extends Component
         ]);
 
         $this->reset('editingTaskId', 'editTitle', 'editDescription', 'editCategoryId');
+        $this->dispatch('toast', message: 'Tarea actualizada.', type: 'success');
     }
 
     public function cancelEdit(): void
     {
         $this->reset('editingTaskId', 'editTitle', 'editDescription', 'editCategoryId');
     }
-
+    
     public function deleteTask(int $taskId): void
     {
         Task::findOrFail($taskId)->delete();
+        $this->dispatch('toast', message: 'Tarea eliminada.', type: 'error');
     }
     #[On('category-deleted')]
     public function refreshTasks(): void

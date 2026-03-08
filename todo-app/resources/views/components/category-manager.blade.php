@@ -37,12 +37,14 @@ new class extends Component
         ]);
 
         $this->reset('newName', 'newColor');
+        $this->dispatch('toast', message: 'Categoría creada.', type: 'success');
     }
 
     public function deleteCategory(int $id): void
     {
         Category::findOrFail($id)->delete();
         $this->dispatch('category-deleted');
+        $this->dispatch('toast', message: 'Categoría eliminada.', type: 'error');
     }
 };
 ?>
