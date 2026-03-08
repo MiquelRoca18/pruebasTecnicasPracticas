@@ -117,7 +117,40 @@ new class extends Component
             Task::where('id', $id)->update(['order' => $index + 1]);
         }
     }
-};
+    public function exportCsv(): void
+    {
+        $tasks = Task::with('category')->orderBy('order')->get();
+
+        $csv = "ID,Title,Description,Completed,Category,Created At\n";
+
+        foreach ($tasks as $task) {
+            $csv .= implode(',', [
+                $task->id,
+                '"' . str_replace('"', '""', $task->title) . '"',
+                '"' . str_replace('"', '""', $task->description ?? '') . '"',
+                $task->completed ? 'Yes' : 'No',
+                '"' . str_replace('"', '""', $task->category?->name ?? '') . '"',
+                $task->created_at->format('Y-m-d'),
+            ]) . "\n";
+        }
+
+        $filename = 'tasks-' . now()->format('Y-m-d') . '.csv';
+
+        $this->dispatch('download-file', content: base64_encode($csv), filename: $filename, mime: 'text/csv');
+    }
+
+    public function exportPdf(): void
+    {
+        $tasks = Task::with('category')->orderBy('order')->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.tasks-pdf', compact('tasks'));
+
+        $filename = 'tasks-' . now()->format('Y-m-d') . '.pdf';
+        $content = base64_encode($pdf->output());
+
+        $this->dispatch('download-file', content: $content, filename: $filename, mime: 'application/pdf');
+    }
+    };
 ?>
 <div>
     {{-- Panel principal --}}
@@ -270,6 +303,21 @@ new class extends Component
                 <li class="text-center py-10 text-gray-400 text-sm">No hay tareas.</li>
             @endforelse
         </ul>
+    </div>
+    {{-- Botones exportar --}}
+    <div class="flex gap-3 pt-2">
+        <button
+            wire:click="exportPdf"
+            class="cursor-pointer flex-1 py-3 bg-gray-800 text-white rounded-xl font-semibold text-sm hover:bg-gray-900 transition shadow"
+        >
+            Exportar PDF
+        </button>
+        <button
+            wire:click="exportCsv"
+            class="cursor-pointer flex-1 py-3 bg-white text-gray-800 border-2 border-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition"
+        >
+            Exportar CSV
+        </button>
     </div>
 
     {{-- Modal Detalle --}}

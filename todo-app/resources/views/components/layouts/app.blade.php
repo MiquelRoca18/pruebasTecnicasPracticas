@@ -79,6 +79,13 @@
                 }
             }
         }
+        document.addEventListener('download-file', (e) => {
+            const { content, filename, mime } = e.detail;
+            const link = document.createElement('a');
+            link.href = `data:${mime};base64,${content}`;
+            link.download = filename;
+            link.click();
+        });
     </script>
 </body>
 </html>
