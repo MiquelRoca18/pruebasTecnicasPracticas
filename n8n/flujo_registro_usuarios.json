@@ -1,0 +1,131 @@
+{
+  "name": "Registro de Usuarios - Alerta Discord",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nuevo-registro",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-a1b2c3d40001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "nuevo-registro"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ── 1. Extraer datos del payload ──────────────────────────────────\nconst body = $input.first().json.body;\n\nif (!body || !body.user) {\n  throw new Error('Payload inválido: falta el objeto \"user\"');\n}\n\nconst { name, email, plan } = body.user;\n\n// ── 2. Validar que el email existe y tiene formato correcto ────────\nif (!email || email.trim() === '') {\n  throw new Error('Validación fallida: el campo \"email\" está vacío o no existe');\n}\n\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (!emailRegex.test(email.trim())) {\n  throw new Error(`Validación fallida: formato de email inválido → \"${email}\"`);\n}\n\n// ── 3. Validar campos obligatorios restantes ───────────────────────\nif (!name || name.trim() === '') {\n  throw new Error('Validación fallida: el campo \"name\" está vacío o no existe');\n}\n\nif (!plan || plan.trim() === '') {\n  throw new Error('Validación fallida: el campo \"plan\" está vacío o no existe');\n}\n\n// ── 4. Construir mensaje formateado ────────────────────────────────\nconst mensaje = `¡Nuevo registro! ${name.trim()} (${email.trim()}) ha contratado el plan ${plan.trim()}.`;\n\n// ── 5. Retornar datos procesados ───────────────────────────────────\nreturn [\n  {\n    json: {\n      mensaje,\n      name: name.trim(),\n      email: email.trim(),\n      plan: plan.trim(),\n      timestamp: new Date().toISOString(),\n      validado: true\n    }\n  }\n];"
+      },
+      "id": "a1b2c3d4-0002-0002-0002-a1b2c3d40002",
+      "name": "Validar y Formatear Mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://webhook.site/adb09263-92f4-4f1a-9790-7d4a0101cbee",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $json.mensaje }}"
+            },
+            {
+              "name": "username",
+              "value": "Bot de Registros"
+            },
+            {
+              "name": "avatar_url",
+              "value": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0003-0003-0003-a1b2c3d40003",
+      "name": "Enviar a Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validar y Formatear Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar y Formatear Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "body": {
+            "user": {
+              "name": "Ana Gómez",
+              "email": "ana@example.com",
+              "plan": "Premium"
+            }
+          },
+          "headers": {
+            "content-type": "application/json"
+          },
+          "params": {}
+        }
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2026-03-08T00:00:00.000Z",
+      "updatedAt": "2026-03-08T00:00:00.000Z",
+      "id": "tag-001",
+      "name": "prueba-tecnica"
+    }
+  ],
+  "triggerCount": 0,
+  "versionId": "1"
+}
