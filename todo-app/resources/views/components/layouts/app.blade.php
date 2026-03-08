@@ -57,7 +57,7 @@
     </main>
 
     <p class="text-center text-white/70 text-sm pb-6 font-semibold tracking-wide">
-        Pagina principal
+        {{ __('app.main_page') }}
     </p>
 
     @livewireScripts

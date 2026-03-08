@@ -59,7 +59,7 @@ new class extends Component
         ]);
 
         $this->reset('newTitle', 'newCategoryId');
-        $this->dispatch('toast', message: 'Tarea creada correctamente.', type: 'success');
+        $this->dispatch('toast', message: __('app.task_created'), type: 'success');
     }
 
     public function toggleComplete(int $taskId): void
@@ -92,23 +92,24 @@ new class extends Component
         ]);
 
         $this->reset('editingTaskId', 'editTitle', 'editDescription', 'editCategoryId');
-        $this->dispatch('toast', message: 'Tarea actualizada.', type: 'success');
+        $this->dispatch('toast', message: __('app.task_updated'), type: 'success');
     }
 
     public function cancelEdit(): void
     {
         $this->reset('editingTaskId', 'editTitle', 'editDescription', 'editCategoryId');
     }
-    
+
     public function deleteTask(int $taskId): void
     {
         Task::findOrFail($taskId)->delete();
-        $this->dispatch('toast', message: 'Tarea eliminada.', type: 'error');
+        $this->dispatch('toast', message: __('app.task_deleted'), type: 'error');
     }
+
     #[On('category-deleted')]
     public function refreshTasks(): void
     {
-        // El with() se re-ejecuta automáticamente, no hace falta código aquí
+        // with() re-runs automatically
     }
 
     public function reorderTasks(array $orderedIds): void
@@ -117,6 +118,7 @@ new class extends Component
             Task::where('id', $id)->update(['order' => $index + 1]);
         }
     }
+
     public function exportCsv(): void
     {
         $tasks = Task::with('category')->orderBy('order')->get();
@@ -135,23 +137,20 @@ new class extends Component
         }
 
         $filename = 'tasks-' . now()->format('Y-m-d') . '.csv';
-
         $this->dispatch('download-file', content: base64_encode($csv), filename: $filename, mime: 'text/csv');
     }
 
     public function exportPdf(): void
     {
         $tasks = Task::with('category')->orderBy('order')->get();
-
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.tasks-pdf', compact('tasks'));
 
         $filename = 'tasks-' . now()->format('Y-m-d') . '.pdf';
-        $content = base64_encode($pdf->output());
-
-        $this->dispatch('download-file', content: $content, filename: $filename, mime: 'application/pdf');
+        $this->dispatch('download-file', content: base64_encode($pdf->output()), filename: $filename, mime: 'application/pdf');
     }
-    };
+};
 ?>
+
 <div>
     {{-- Panel principal --}}
     <div class="bg-white rounded-2xl shadow-lg p-6 space-y-4">
@@ -162,7 +161,7 @@ new class extends Component
                 @click="open = !open"
                 class="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-xl text-gray-400 hover:border-blue-400 hover:text-blue-500 transition text-sm font-medium"
             >
-                📋 Añadir una Tarea
+                📋 {{ __('app.add_task') }}
             </button>
 
             <div x-show="open" x-transition @click.outside="open = false"
@@ -172,7 +171,7 @@ new class extends Component
                     <input
                         type="text"
                         wire:model="newTitle"
-                        placeholder="Título de la tarea..."
+                        placeholder="{{ __('app.task_title_placeholder') }}"
                         class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                     @error('newTitle')
@@ -184,7 +183,7 @@ new class extends Component
                     wire:model="newCategoryId"
                     class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
-                    <option value="">Sin categoría</option>
+                    <option value="">{{ __('app.no_category') }}</option>
                     @foreach ($categories as $cat)
                         <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                     @endforeach
@@ -193,13 +192,13 @@ new class extends Component
                 <div class="flex justify-end gap-2">
                     <button @click="open = false"
                         class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
-                        Cancelar
+                        {{ __('app.cancel') }}
                     </button>
                     <button
                         wire:click="createTask"
                         @click="$wire.createTask().then(() => open = false)"
                         class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition">
-                        Añadir
+                        {{ __('app.add') }}
                     </button>
                 </div>
             </div>
@@ -208,7 +207,7 @@ new class extends Component
         {{-- Filtros + Búsqueda --}}
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
             <div class="flex gap-5 text-sm font-medium">
-                @foreach (['all' => 'Todas', 'pending' => 'Pendiente', 'completed' => 'Completadas'] as $key => $label)
+                @foreach (['all' => __('app.all'), 'pending' => __('app.pending'), 'completed' => __('app.completed')] as $key => $label)
                     <button
                         wire:click="$set('filter', '{{ $key }}')"
                         class="{{ $filter === $key ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-700' }} pb-1 transition"
@@ -226,7 +225,7 @@ new class extends Component
                     <input
                         wire:model.live.debounce.300ms="search"
                         type="text"
-                        placeholder="Buscar tareas..."
+                        placeholder="{{ __('app.search_placeholder') }}"
                         class="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 w-48"
                     />
                 </div>
@@ -236,15 +235,18 @@ new class extends Component
         {{-- Lista de tareas --}}
         <ul
             id="task-list"
-            wire:ignore
             class="space-y-1 min-h-[200px]"
         >
             @forelse ($tasks as $task)
-                <li
-                    data-id="{{ $task->id }}"
-                    wire:key="task-{{ $task->id }}"
-                    class="flex items-center justify-between py-3 border-b border-gray-100"
-                >
+            <li
+                data-id="{{ $task->id }}"
+                data-title="{{ addslashes($task->title) }}"
+                data-description="{{ addslashes($task->description ?? '') }}"
+                data-completed="{{ $task->completed ? 'true' : 'false' }}"
+                data-category="{{ addslashes($task->category?->name ?? '') }}"
+                wire:key="task-{{ $task->id }}"
+                class="flex items-center justify-between py-3 border-b border-gray-100"
+            >
                     <div class="flex items-center gap-3 flex-1 min-w-0">
                         <span class="cursor-grab text-gray-300 drag-handle mr-1">⠿</span>
                         <input
@@ -265,17 +267,20 @@ new class extends Component
                     </div>
 
                     <div class="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <button
-                            @click="$dispatch('show-task-detail', {
-                                title: '{{ addslashes($task->title) }}',
-                                description: '{{ addslashes($task->description ?? '') }}',
-                                completed: {{ $task->completed ? 'true' : 'false' }},
-                                category: '{{ addslashes($task->category?->name ?? '') }}'
-                            })"
-                            class="text-gray-400 hover:text-blue-500 transition"
-                        >
-                            👁️
-                        </button>
+                    <button
+                        @click="
+                            const li = $el.closest('li');
+                            $dispatch('show-task-detail', {
+                                title: li.dataset.title,
+                                description: li.dataset.description,
+                                completed: li.dataset.completed === 'true',
+                                category: li.dataset.category
+                            })
+                        "
+                        class="text-gray-400 hover:text-blue-500 transition"
+                    >
+                        👁️
+                    </button>
 
                         <div x-data="{ open: false }" class="relative">
                             <button @click="open = !open" @click.outside="open = false"
@@ -288,63 +293,64 @@ new class extends Component
                                     wire:click="startEditing({{ $task->id }})"
                                     @click="open = false; $dispatch('open-edit-modal')"
                                     class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    ✏️ Editar
+                                    ✏️ {{ __('app.edit') }}
                                 </button>
                                 <button
                                     @click="open = false; $dispatch('confirm-delete', { id: {{ $task->id }} })"
                                     class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">
-                                    🗑️ Eliminar
+                                    🗑️ {{ __('app.delete') }}
                                 </button>
                             </div>
                         </div>
                     </div>
                 </li>
             @empty
-                <li class="text-center py-10 text-gray-400 text-sm">No hay tareas.</li>
+                <li class="text-center py-10 text-gray-400 text-sm">{{ __('app.no_tasks') }}</li>
             @endforelse
         </ul>
-    </div>
-    {{-- Botones exportar --}}
-    <div class="flex gap-3 pt-2">
-        <button
-            wire:click="exportPdf"
-            class="cursor-pointer flex-1 py-3 bg-gray-800 text-white rounded-xl font-semibold text-sm hover:bg-gray-900 transition shadow"
-        >
-            Exportar PDF
-        </button>
-        <button
-            wire:click="exportCsv"
-            class="cursor-pointer flex-1 py-3 bg-white text-gray-800 border-2 border-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition"
-        >
-            Exportar CSV
-        </button>
+
+        {{-- Botones exportar --}}
+        <div class="flex gap-3 pt-2">
+            <button
+                wire:click="exportPdf"
+                class="cursor-pointer flex-1 py-3 bg-gray-800 text-white rounded-xl font-semibold text-sm hover:bg-gray-900 transition shadow"
+            >
+                {{ __('app.export_pdf') }}
+            </button>
+            <button
+                wire:click="exportCsv"
+                class="cursor-pointer flex-1 py-3 bg-white text-gray-800 border-2 border-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition"
+            >
+                {{ __('app.export_csv') }}
+            </button>
+        </div>
     </div>
 
     {{-- Modal Detalle --}}
     <div
+        x-cloak
         x-data="{ open: false, task: null }"
         x-on:show-task-detail.window="task = $event.detail; open = true"
         x-on:keydown.escape.window="open = false"
-        x-cloak x-data="{ open: false, task: null }"
     >
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center p-4">
             <div @click.outside="open = false"
                 class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-3">
                 <h3 class="font-bold text-gray-800 text-lg" x-text="task?.title"></h3>
-                <p class="text-sm text-gray-500" x-text="task?.description || 'Sin descripción.'"></p>
+                <p class="text-sm text-gray-500" x-text="task?.description || '{{ __('app.no_description') }}'"></p>
                 <div class="flex gap-2">
                     <span x-show="task?.category"
                         class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
                         x-text="task?.category"></span>
                     <span class="px-2 py-0.5 rounded-full text-xs font-medium"
                         :class="task?.completed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
-                        x-text="task?.completed ? 'Completada' : 'Pendiente'"></span>
+                        x-text="task?.completed ? '{{ __('app.task_completed') }}' : '{{ __('app.task_pending') }}'"></span>
                 </div>
                 <div class="flex justify-end pt-2">
                     <button @click="open = false"
                         class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition">
-                        Cerrar
+                        {{ __('app.close') }}
                     </button>
                 </div>
             </div>
@@ -353,32 +359,32 @@ new class extends Component
 
     {{-- Modal Editar --}}
     <div
+        x-cloak
         x-data="{ open: false }"
         x-on:open-edit-modal.window="open = true"
         x-on:keydown.escape.window="open = false"
-        x-cloak x-data="{ open: false, task: null }"
     >
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center p-4">
             <div @click.outside="open = false; $wire.cancelEdit()"
                 class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4">
-                <h3 class="font-bold text-gray-800 text-lg">Editar Tarea</h3>
+                <h3 class="font-bold text-gray-800 text-lg">{{ __('app.edit_task') }}</h3>
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Título</label>
+                    <label class="block text-sm text-gray-600 mb-1">{{ __('app.title') }}</label>
                     <input type="text" wire:model="editTitle"
                         class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"/>
                     @error('editTitle') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Descripción</label>
+                    <label class="block text-sm text-gray-600 mb-1">{{ __('app.description') }}</label>
                     <textarea wire:model="editDescription" rows="3"
                         class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"></textarea>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Categoría</label>
+                    <label class="block text-sm text-gray-600 mb-1">{{ __('app.category') }}</label>
                     <select wire:model="editCategoryId"
                         class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        <option value="">Sin categoría</option>
+                        <option value="">{{ __('app.no_category') }}</option>
                         @foreach ($categories as $cat)
                             <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                         @endforeach
@@ -387,12 +393,12 @@ new class extends Component
                 <div class="flex justify-end gap-3 pt-2">
                     <button @click="open = false; $wire.cancelEdit()"
                         class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
-                        Cancelar
+                        {{ __('app.cancel') }}
                     </button>
                     <button
                         @click="$wire.saveEdit().then(() => open = false)"
                         class="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition">
-                        Guardar
+                        {{ __('app.save') }}
                     </button>
                 </div>
             </div>
@@ -401,38 +407,44 @@ new class extends Component
 
     {{-- Modal Confirmar Eliminar --}}
     <div
+        x-cloak
         x-data="{ open: false, taskId: null }"
         x-on:confirm-delete.window="open = true; taskId = $event.detail.id"
         x-on:keydown.escape.window="open = false"
-        x-cloak x-data="{ open: false, task: null }"
     >
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center p-4">
             <div @click.outside="open = false"
                 class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4">
                 <div class="text-4xl">🗑️</div>
-                <h3 class="font-bold text-gray-800">¿Eliminar esta tarea?</h3>
-                <p class="text-sm text-gray-500">Esta acción no se puede deshacer.</p>
+                <h3 class="font-bold text-gray-800">{{ __('app.delete_title') }}</h3>
+                <p class="text-sm text-gray-500">{{ __('app.delete_body') }}</p>
                 <div class="flex gap-3 justify-center pt-2">
                     <button @click="open = false"
                         class="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition">
-                        Cancelar
+                        {{ __('app.cancel') }}
                     </button>
                     <button
                         @click="$wire.deleteTask(taskId); open = false"
                         class="px-5 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition">
-                        Sí, eliminar
+                        {{ __('app.confirm_delete') }}
                     </button>
                 </div>
             </div>
         </div>
     </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        let sortableInstance = null;
+
+        function initSortable() {
             const el = document.getElementById('task-list');
             if (!el) return;
-
-            Sortable.create(el, {
+            if (sortableInstance) {
+                sortableInstance.destroy();
+                sortableInstance = null;
+            }
+            sortableInstance = Sortable.create(el, {
                 handle: '.drag-handle',
                 animation: 150,
                 onEnd: () => {
@@ -445,6 +457,9 @@ new class extends Component
                     ).reorderTasks(ids);
                 }
             });
-        });
+        }
+
+        document.addEventListener('DOMContentLoaded', initSortable);
+        document.addEventListener('livewire:updated', initSortable);
     </script>
 </div>
