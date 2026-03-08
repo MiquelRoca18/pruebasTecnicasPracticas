@@ -110,6 +110,13 @@ new class extends Component
     {
         // El with() se re-ejecuta automáticamente, no hace falta código aquí
     }
+
+    public function reorderTasks(array $orderedIds): void
+    {
+        foreach ($orderedIds as $index => $id) {
+            Task::where('id', $id)->update(['order' => $index + 1]);
+        }
+    }
 };
 ?>
 <div>
@@ -194,10 +201,19 @@ new class extends Component
         </div>
 
         {{-- Lista de tareas --}}
-        <ul class="space-y-1 min-h-[200px]">
+        <ul
+            id="task-list"
+            wire:ignore
+            class="space-y-1 min-h-[200px]"
+        >
             @forelse ($tasks as $task)
-                <li class="flex items-center justify-between py-3 border-b border-gray-100">
+                <li
+                    data-id="{{ $task->id }}"
+                    wire:key="task-{{ $task->id }}"
+                    class="flex items-center justify-between py-3 border-b border-gray-100"
+                >
                     <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <span class="cursor-grab text-gray-300 drag-handle mr-1">⠿</span>
                         <input
                             type="checkbox"
                             wire:click="toggleComplete({{ $task->id }})"
@@ -363,5 +379,24 @@ new class extends Component
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const el = document.getElementById('task-list');
+            if (!el) return;
 
+            Sortable.create(el, {
+                handle: '.drag-handle',
+                animation: 150,
+                onEnd: () => {
+                    const ids = Array.from(
+                        document.querySelectorAll('#task-list [data-id]')
+                    ).map(el => parseInt(el.dataset.id));
+
+                    Livewire.find(
+                        el.closest('[wire\\:id]').getAttribute('wire:id')
+                    ).reorderTasks(ids);
+                }
+            });
+        });
+    </script>
 </div>
