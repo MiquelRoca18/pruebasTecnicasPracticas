@@ -3,6 +3,7 @@
 use App\Models\Task;
 use App\Models\Category;
 use Livewire\Volt\Component;
+use Livewire\Attributes\On;
 
 new class extends Component
 {
@@ -100,6 +101,11 @@ new class extends Component
     public function deleteTask(int $taskId): void
     {
         Task::findOrFail($taskId)->delete();
+    }
+    #[On('category-deleted')]
+    public function refreshTasks(): void
+    {
+        // El with() se re-ejecuta automáticamente, no hace falta código aquí
     }
 };
 ?>
@@ -252,6 +258,7 @@ new class extends Component
         x-data="{ open: false, task: null }"
         x-on:show-task-detail.window="task = $event.detail; open = true"
         x-on:keydown.escape.window="open = false"
+        x-cloak x-data="{ open: false, task: null }"
     >
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center p-4">
@@ -282,6 +289,7 @@ new class extends Component
         x-data="{ open: false }"
         x-on:open-edit-modal.window="open = true"
         x-on:keydown.escape.window="open = false"
+        x-cloak x-data="{ open: false, task: null }"
     >
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center p-4">
@@ -329,6 +337,7 @@ new class extends Component
         x-data="{ open: false, taskId: null }"
         x-on:confirm-delete.window="open = true; taskId = $event.detail.id"
         x-on:keydown.escape.window="open = false"
+        x-cloak x-data="{ open: false, task: null }"
     >
         <div x-show="open" x-transition.opacity
             class="fixed inset-0 bg-black/50 z-30 flex items-center justify-center p-4">
